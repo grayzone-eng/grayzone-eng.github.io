@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shift Manager</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #141414;
+    --border: #1e1e1e;
+    --text: #e8e8e8;
+    --text-dim: #555;
+    --text-muted: #2a2a2a;
+    --accent: #00ff88;
+    --accent-dim: rgba(0,255,136,0.07);
+    --pink: #ff6b9d;
+    --pink-dim: rgba(255,107,157,0.08);
+    --blue: #4d9fff;
+    --yellow: #ffd166;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Noto Sans JP', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  /* Top Bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .logo span { color: var(--accent); }
+
+  .store-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    padding: 3px 8px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+
+  .topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .date-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .date-nav button {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    width: 24px;
+    height: 24px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .date-nav button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    padding: 6px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    font-weight: 600;
+  }
+
+  .btn-primary:hover { background: #00cc6e; }
+
+  .btn-ghost {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+
+  /* Layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 220px 1fr 280px;
+    min-height: calc(100vh - 49px);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 16px 0;
+    background: var(--surface);
+  }
+
+  .sidebar-section {
+    padding: 0 16px;
+    margin-bottom: 24px;
+  }
+
+  .sidebar-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* Cast List */
+  .cast-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 2px;
+  }
+
+  .cast-item:hover { background: var(--border); }
+  .cast-item.active { background: var(--accent-dim); }
+
+  .cast-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 500;
+    flex-shrink: 0;
+  }
+
+  .cast-info { flex: 1; min-width: 0; }
+
+  .cast-name {
+    font-size: 12px;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cast-meta {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 1px;
+  }
+
+  .cast-status {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-on { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+  .status-off { background: var(--text-muted); }
+  .status-break { background: var(--yellow); }
+
+  /* Summary */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .summary-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px;
+  }
+
+  .summary-card .val {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .summary-card .key {
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* Main Area — Shift Grid */
+  .main {
+    padding: 20px 24px;
+    overflow-x: auto;
+  }
+
+  .shift-grid-wrap {
+    min-width: 600px;
+  }
+
+  .shift-grid-header {
+    display: grid;
+    grid-template-columns: 100px repeat(7, 1fr);
+    gap: 1px;
+    margin-bottom: 1px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+  }
+
+  .shift-grid-header > div {
+    padding: 6px 8px;
+    text-align: center;
+  }
+
+  .shift-grid-header .today {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .shift-row {
+    display: grid;
+    grid-template-columns: 100px repeat(7, 1fr);
+    gap: 1px;
+    margin-bottom: 1px;
+  }
+
+  .shift-cast-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 400;
+    background: var(--surface);
+    border-radius: 2px 0 0 2px;
+  }
+
+  .shift-cell {
+    height: 36px;
+    background: var(--surface);
+    border-radius: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.1s;
+    position: relative;
+  }
+
+  .shift-cell:hover { filter: brightness(1.3); }
+
+  .shift-cell.work {
+    background: rgba(0,255,136,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(0,255,136,0.2);
+  }
+
+  .shift-cell.off {
+    background: var(--surface);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+
+  .shift-cell.pending {
+    background: rgba(255,209,102,0.08);
+    color: var(--yellow);
+    border: 1px solid rgba(255,209,102,0.2);
+  }
+
+  .shift-cell.today-col {
+    border-left: 2px solid rgba(0,255,136,0.3);
+  }
+
+  /* Timeline */
+  .timeline {
+    margin-top: 20px;
+  }
+
+  .timeline-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .timeline-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+
+  .timeline-name {
+    font-size: 11px;
+    width: 70px;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--text-dim);
+  }
+
+  .timeline-bar-wrap {
+    flex: 1;
+    height: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .timeline-bar {
+    position: absolute;
+    height: 100%;
+    border-radius: 1px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    font-family: var(--mono);
+    font-size: 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    font-weight: 600;
+  }
+
+  .timeline-hours {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 0 0 80px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+
+  /* Right Panel */
+  .right-panel {
+    border-left: 1px solid var(--border);
+    padding: 16px;
+    background: var(--surface);
+  }
+
+  .right-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Request List */
+  .request-item {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    margin-bottom: 8px;
+    background: var(--surface2);
+    transition: all 0.15s;
+  }
+
+  .request-item:hover { border-color: var(--border-active, #2a2a2a); }
+
+  .request-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .request-name {
+    font-size: 12px;
+    font-weight: 400;
+  }
+
+  .request-badge {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 2px;
+  }
+
+  .badge-new { background: rgba(77,159,255,0.12); color: var(--blue); border: 1px solid rgba(77,159,255,0.2); }
+  .badge-urgent { background: rgba(255,107,157,0.12); color: var(--pink); border: 1px solid rgba(255,107,157,0.2); }
+
+  .request-detail {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .request-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .btn-sm {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-approve { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0,255,136,0.2); }
+  .btn-approve:hover { background: rgba(0,255,136,0.15); }
+  .btn-reject { background: rgba(255,68,68,0.06); color: #ff4444; border: 1px solid rgba(255,68,68,0.15); }
+  .btn-reject:hover { background: rgba(255,68,68,0.12); }
+
+  /* Stats right */
+  .perf-item {
+    margin-bottom: 12px;
+  }
+
+  .perf-top {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  .perf-name { font-size: 11px; }
+  .perf-val { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+
+  .perf-bar-bg {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .perf-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+  }
+</style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo">SHIFT<span>.</span>MGR</div>
+    <div class="store-badge">中洲 / SHOP_03</div>
+  </div>
+  <div class="topbar-right">
+    <div class="date-nav">
+      <button>‹</button>
+      <span id="currentWeek"></span>
+      <button>›</button>
+    </div>
+    <button class="btn btn-ghost">CSV出力</button>
+    <button class="btn btn-primary">+ シフト追加</button>
+  </div>
+</div>
+
+<!-- Layout -->
+<div class="layout">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">本日の出勤</div>
+      <div class="summary-grid">
+        <div class="summary-card">
+          <div class="val" style="color: var(--accent)">7</div>
+          <div class="key">出勤</div>
+        </div>
+        <div class="summary-card">
+          <div class="val" style="color: var(--text-dim)">3</div>
+          <div class="key">休み</div>
+        </div>
+        <div class="summary-card">
+          <div class="val" style="color: var(--yellow)">2</div>
+          <div class="key">申請中</div>
+        </div>
+        <div class="summary-card">
+          <div class="val" style="color: var(--pink)">1</div>
+          <div class="key">遅刻</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">キャスト一覧</div>
+      <div id="castList"></div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="shift-grid-wrap">
+
+      <div style="font-family: var(--mono); font-size: 9px; color: var(--text-dim); letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 12px;">
+        週間シフト表
+      </div>
+
+      <!-- Header -->
+      <div class="shift-grid-header" id="shiftHeader"></div>
+
+      <!-- Rows -->
+      <div id="shiftRows"></div>
+
+      <!-- Timeline -->
+      <div class="timeline" style="margin-top: 28px;">
+        <div class="timeline-label">本日のタイムライン</div>
+        <div class="timeline-hours" id="timelineHours"></div>
+        <div id="timelineRows"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel">
+    <div class="right-label">シフト申請</div>
+
+    <div id="requestList"></div>
+
+    <div class="divider"></div>
+
+    <div class="right-label">今週のパフォーマンス</div>
+    <div id="perfList"></div>
+
+  </div>
+
+</div>
+
+<script>
+// ── データ ──────────────────────────────────────
+const CASTS = [
+  { id: 1, name: 'さくら',   color: '#ff6b9d', bg: 'rgba(255,107,157,0.15)', shift: [1,1,0,1,1,0,1], hours: [18,24], perf: 92 },
+  { id: 2, name: 'あかね',   color: '#ffd166', bg: 'rgba(255,209,102,0.15)', shift: [0,1,1,1,0,1,1], hours: [20,26], perf: 78 },
+  { id: 3, name: 'みずき',   color: '#4d9fff', bg: 'rgba(77,159,255,0.15)',  shift: [1,0,1,0,1,1,0], hours: [19,24], perf: 85 },
+  { id: 4, name: 'ゆずは',   color: '#a78bfa', bg: 'rgba(167,139,250,0.15)',  shift: [1,1,1,0,0,1,1], hours: [21,27], perf: 95 },
+  { id: 5, name: 'ももか',   color: '#00ff88', bg: 'rgba(0,255,136,0.12)',   shift: [0,0,1,1,1,0,1], hours: [17,23], perf: 67 },
+  { id: 6, name: 'ひなた',   color: '#f97316', bg: 'rgba(249,115,22,0.15)',  shift: [1,1,0,1,0,1,0], hours: [20,25], perf: 81 },
+  { id: 7, name: 'れいな',   color: '#ec4899', bg: 'rgba(236,72,153,0.15)',  shift: [2,1,1,2,1,1,2], hours: [22,28], perf: 73 },
+  { id: 8, name: 'ことね',   color: '#06b6d4', bg: 'rgba(6,182,212,0.15)',   shift: [1,0,0,1,1,1,0], hours: [19,24], perf: 88 },
+  { id: 9, name: 'のどか',   color: '#84cc16', bg: 'rgba(132,204,22,0.15)', shift: [0,1,1,0,1,0,1], hours: [23,28], perf: 70 },
+  { id:10, name: 'あやめ',   color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', shift: [1,1,1,1,0,0,1], hours: [18,23], perf: 91 },
+];
+
+const DAYS = ['月','火','水','木','金','土','日'];
+const TODAY_IDX = 3; // 木曜
+
+const REQUESTS = [
+  { name: 'さくら', badge: 'badge-urgent', label: '急', detail: '8/16（土）出勤 → 休み希望\n理由：体調不良', color: '#ff6b9d' },
+  { name: 'あかね', badge: 'badge-new', label: 'new', detail: '8/18（月）追加出勤希望\n希望時間: 18:00〜24:00', color: '#ffd166' },
+  { name: 'みずき', badge: 'badge-new', label: 'new', detail: '8/20（水）シフト変更希望\n19:00 → 21:00スタートに', color: '#4d9fff' },
+];
+
+// ── 描画 ──────────────────────────────────────
+
+// Cast List
+const castList = document.getElementById('castList');
+CASTS.forEach((c, i) => {
+  const active = c.shift[TODAY_IDX] === 1;
+  const pending = c.shift[TODAY_IDX] === 2;
+  castList.innerHTML += `
+    <div class="cast-item${i===0?' active':''}">
+      <div class="cast-avatar" style="background:${c.bg};color:${c.color}">${c.name[0]}</div>
+      <div class="cast-info">
+        <div class="cast-name">${c.name}</div>
+        <div class="cast-meta">${active ? '出勤中' : pending ? '申請中' : '本日休み'}</div>
+      </div>
+      <div class="cast-status ${active ? 'status-on' : pending ? 'status-break' : 'status-off'}"></div>
+    </div>
+  `;
+});
+
+// Shift Header
+const shiftHeader = document.getElementById('shiftHeader');
+shiftHeader.innerHTML = '<div></div>';
+DAYS.forEach((d, i) => {
+  shiftHeader.innerHTML += `<div class="${i===TODAY_IDX?'today':''}">${d}${i===TODAY_IDX?' ●':''}</div>`;
+});
+
+// Shift Rows
+const shiftRows = document.getElementById('shiftRows');
+CASTS.forEach(c => {
+  let row = `<div class="shift-row">
+    <div class="shift-cast-name">
+      <div class="cast-avatar" style="width:20px;height:20px;font-size:9px;background:${c.bg};color:${c.color};border-radius:50%;display:flex;align-items:center;justify-content:center;">${c.name[0]}</div>
+      <span style="font-size:11px">${c.name}</span>
+    </div>`;
+  c.shift.forEach((s, i) => {
+    const cls = s === 0 ? 'off' : s === 2 ? 'pending' : 'work';
+    const label = s === 0 ? '—' : s === 2 ? 'REQ' : 'OUT';
+    const todayCls = i === TODAY_IDX ? ' today-col' : '';
+    row += `<div class="shift-cell ${cls}${todayCls}">${label}</div>`;
+  });
+  row += '</div>';
+  shiftRows.innerHTML += row;
+});
+
+// Timeline Hours
+const timelineHours = document.getElementById('timelineHours');
+['17','19','21','23','25','27'].forEach(h => {
+  timelineHours.innerHTML += `<span>${h}:00</span>`;
+});
+
+// Timeline Rows (today only)
+const timelineRows = document.getElementById('timelineRows');
+const BAR_START = 17; // 17時が左端
+const BAR_RANGE = 12; // 12時間表示
+
+CASTS.filter(c => c.shift[TODAY_IDX] === 1).forEach(c => {
+  const left = ((c.hours[0] - BAR_START) / BAR_RANGE * 100).toFixed(1);
+  const width = ((c.hours[1] - c.hours[0]) / BAR_RANGE * 100).toFixed(1);
+  const startH = c.hours[0];
+  const endH = c.hours[1] > 24 ? `翌${c.hours[1]-24}:00` : `${c.hours[1]}:00`;
+
+  timelineRows.innerHTML += `
+    <div class="timeline-row">
+      <div class="timeline-name">${c.name}</div>
+      <div class="timeline-bar-wrap">
+        <div class="timeline-bar" style="left:${left}%;width:${width}%;background:${c.bg};color:${c.color}">
+          ${startH}:00–${endH}
+        </div>
+      </div>
+    </div>
+  `;
+});
+
+// Requests
+const requestList = document.getElementById('requestList');
+REQUESTS.forEach(r => {
+  requestList.innerHTML += `
+    <div class="request-item">
+      <div class="request-top">
+        <span class="request-name" style="color:${r.color}">${r.name}</span>
+        <span class="request-badge ${r.badge}">${r.label}</span>
+      </div>
+      <div class="request-detail">${r.detail.replace('\n','<br>')}</div>
+      <div class="request-actions">
+        <button class="btn-sm btn-approve" onclick="approveRequest(this)">承認</button>
+        <button class="btn-sm btn-reject" onclick="rejectRequest(this)">却下</button>
+      </div>
+    </div>
+  `;
+});
+
+// Performance
+const perfList = document.getElementById('perfList');
+[...CASTS].sort((a,b) => b.perf - a.perf).slice(0,5).forEach(c => {
+  perfList.innerHTML += `
+    <div class="perf-item">
+      <div class="perf-top">
+        <span class="perf-name">${c.name}</span>
+        <span class="perf-val">${c.perf}%</span>
+      </div>
+      <div class="perf-bar-bg">
+        <div class="perf-bar-fill" style="width:${c.perf}%;background:${c.color}"></div>
+      </div>
+    </div>
+  `;
+});
+
+// Actions
+function approveRequest(btn) {
+  const item = btn.closest('.request-item');
+  item.style.opacity = '0.4';
+  item.style.pointerEvents = 'none';
+  btn.textContent = '✓ 承認済';
+}
+
+function rejectRequest(btn) {
+  const item = btn.closest('.request-item');
+  item.style.opacity = '0.3';
+  item.style.pointerEvents = 'none';
+}
+
+// Date nav
+const now = new Date();  // 常に今日の日付を使用
+document.getElementById('currentWeek').textContent =
+  `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日（週）`;
+</script>
+</body>
+</html>

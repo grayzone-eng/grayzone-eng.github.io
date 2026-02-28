@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infra Design — Gray Zone Engineer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Noto+Sans+JP:wght@200;300;400&family=Bebas+Neue&display=swap');
+
+  :root {
+    --bg: #080808;
+    --surface: #0f0f0f;
+    --surface2: #131313;
+    --border: #1a1a1a;
+    --border2: #242424;
+    --text: #e2e2e2;
+    --text-dim: #4a4a4a;
+    --text-mid: #888;
+    --accent: #00ff88;
+    --accent-dim: rgba(0,255,136,0.07);
+    --red: #ff4444;
+    --red-dim: rgba(255,68,68,0.08);
+    --yellow: #ffd166;
+    --blue: #4d9fff;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Noto Sans JP', sans-serif;
+    --display: 'Bebas Neue', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    height: 52px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,8,8,0.95);
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+  }
+  .nav-logo span { color: var(--accent); }
+
+  .nav-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  /* HEADER */
+  .page-header {
+    padding: 60px 40px 40px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .page-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .page-title {
+    font-family: var(--display);
+    font-size: clamp(36px, 5vw, 72px);
+    letter-spacing: 0.03em;
+    line-height: 0.95;
+    margin-bottom: 16px;
+  }
+
+  .page-sub {
+    font-size: 13px;
+    color: var(--text-mid);
+    line-height: 1.9;
+    max-width: 560px;
+  }
+
+  /* TOGGLE */
+  .toggle-wrap {
+    padding: 24px 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .toggle-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .toggle-btn {
+    display: flex;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .toggle-option {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    padding: 8px 20px;
+    cursor: pointer;
+    color: var(--text-dim);
+    border: none;
+    background: none;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .toggle-option.active-bad {
+    background: var(--red-dim);
+    color: var(--red);
+  }
+
+  .toggle-option.active-good {
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  .toggle-option:hover { color: var(--text); }
+
+  .risk-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 12px;
+    border-radius: 2px;
+    letter-spacing: 0.1em;
+  }
+
+  .risk-high { background: var(--red-dim); color: var(--red); border: 1px solid rgba(255,68,68,0.2); }
+  .risk-low  { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(0,255,136,0.2); }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    min-height: calc(100vh - 200px);
+  }
+
+  /* DIAGRAM AREA */
+  .diagram-area {
+    padding: 32px 40px;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .diagram-title {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .diagram-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* SVG Diagram */
+  .svg-wrap {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  svg {
+    width: 100%;
+    height: auto;
+    font-family: var(--mono);
+  }
+
+  /* DETAIL PANEL */
+  .detail-panel {
+    padding: 24px;
+    background: var(--surface);
+  }
+
+  .detail-section {
+    margin-bottom: 24px;
+  }
+
+  .detail-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* Risk meter */
+  .risk-meter {
+    margin-bottom: 20px;
+  }
+
+  .risk-bar-bg {
+    height: 4px;
+    background: var(--border2);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 6px;
+  }
+
+  .risk-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .risk-nums {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  /* Metric Cards */
+  .metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .metric-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 10px 12px;
+  }
+
+  .metric-key {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  .metric-val {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  /* Stack List */
+  .stack-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .stack-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 11px;
+    transition: border-color 0.15s;
+  }
+
+  .stack-item:hover { border-color: var(--border2); }
+
+  .stack-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .stack-name {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    margin-bottom: 2px;
+  }
+
+  .stack-desc {
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* Comparison Table */
+  .compare-section {
+    padding: 32px 40px;
+    border-top: 1px solid var(--border);
+    grid-column: 1 / -1;
+  }
+
+  .compare-title {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+
+  .compare-table th {
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    font-weight: 400;
+  }
+
+  .compare-table td {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    vertical-align: top;
+    line-height: 1.7;
+  }
+
+  .compare-table .bad  { color: var(--red); }
+  .compare-table .good { color: var(--accent); }
+  .compare-table .neutral { color: var(--text-mid); }
+
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .anim { animation: fadeIn 0.35s ease forwards; }
+
+  @media (max-width: 860px) {
+    .main { grid-template-columns: 1fr; }
+    .diagram-area { border-right: none; border-bottom: 1px solid var(--border); }
+    nav { padding: 0 20px; }
+    .page-header, .toggle-wrap, .diagram-area, .compare-section { padding-left: 20px; padding-right: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">GRAY<span>.</span>ZONE<span>.</span>ENG</div>
+  <div class="nav-title">Infra Design</div>
+</nav>
+
+<div class="page-header">
+  <div class="page-tag">// infra architecture</div>
+  <h1 class="page-title">インフラ<br>設計比較</h1>
+  <p class="page-sub">
+    大手クラウド依存構成と、アダルト産業向けレジリエンス構成の違いを可視化する。<br>
+    BANリスク・復旧時間・コスト・ポータビリティの4軸で評価。
+  </p>
+</div>
+
+<div class="toggle-wrap">
+  <span class="toggle-label">構成を切り替え</span>
+  <div class="toggle-btn">
+    <button class="toggle-option active-bad" id="btn-bad" onclick="switchArch('bad')">⚠ 大手クラウド依存</button>
+    <button class="toggle-option" id="btn-good" onclick="switchArch('good')">✓ レジリエンス構成</button>
+  </div>
+  <span class="risk-badge risk-high" id="riskBadge">BAN RISK: HIGH</span>
+</div>
+
+<div class="main">
+
+  <!-- DIAGRAM -->
+  <div class="diagram-area">
+    <div class="diagram-title" id="diagramTitle">大手クラウド依存構成</div>
+    <div class="svg-wrap" id="svgWrap"></div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="detail-panel">
+
+    <div class="detail-section">
+      <div class="detail-label">リスク評価</div>
+      <div class="risk-meter">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text-dim)">BAN リスク</span>
+          <span style="font-family:var(--mono);font-size:11px;font-weight:600;" id="riskVal">CRITICAL</span>
+        </div>
+        <div class="risk-bar-bg">
+          <div class="risk-bar-fill" id="riskBar" style="width:95%;background:var(--red)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-label">主要指標</div>
+      <div class="metric-grid" id="metricGrid"></div>
+    </div>
+
+    <div class="detail-section">
+      <div class="detail-label">スタック詳細</div>
+      <div class="stack-list" id="stackList"></div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- COMPARE TABLE -->
+<div class="compare-section" style="border-top:1px solid var(--border);padding:32px 40px;">
+  <div class="compare-title">// 4軸比較表</div>
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th style="width:160px">項目</th>
+        <th>⚠ 大手クラウド依存</th>
+        <th>✓ レジリエンス構成</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="neutral">BANリスク</td>
+        <td class="bad">非常に高い。AWS・Cloudflareはアダルトコンテンツを規約で明示的に禁止。報告1件でアカウント凍結、即サービス停止。</td>
+        <td class="good">低い。Bunny.net・DatapacketはアダルトOKを明示。規約違反でのBAN自体が発生しない。</td>
+      </tr>
+      <tr>
+        <td class="neutral">復旧時間</td>
+        <td class="bad">数日〜数週間。クラウドのサポート対応待ち。データ取り出しすら困難になるケースあり。</td>
+        <td class="good">30分以内。Docker Composeで環境をポータブル化。別サーバへのデプロイが手順書通りに実行可能。</td>
+      </tr>
+      <tr>
+        <td class="neutral">月間コスト</td>
+        <td class="bad">$150〜400。転送量課金が高く、アダルト動画の帯域幅でAWS CloudFrontは青天井になりやすい。</td>
+        <td class="good">$60〜120。Bunny.netは転送量単価が約1/10。Datapacket等のオフショアVPSは固定費で予測可能。</td>
+      </tr>
+      <tr>
+        <td class="neutral">ポータビリティ</td>
+        <td class="bad">低い。プロプライエタリなサービス依存が深く、移行コストが高い。RDSやS3からの脱出は数週間規模。</td>
+        <td class="good">高い。Docker Composeで全サービスをコード化。PostgreSQL・Nginxは標準OSSなのでどこでも動く。</td>
+      </tr>
+      <tr>
+        <td class="neutral">フロント配信</td>
+        <td class="bad">Vercelは静的サイトのみ許容（アダルト動画は不可）。CloudFrontはアカウント共有リスク。</td>
+        <td class="good">Next.jsフロントはVercelで問題なし。動画・画像のみBunny Streamに分離することでリスクを局所化。</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+const DATA = {
+  bad: {
+    title: '大手クラウド依存構成',
+    metrics: [
+      { key: 'BAN RISK',    val: 'CRITICAL', color: 'var(--red)' },
+      { key: 'RECOVERY',    val: '数日〜週',   color: 'var(--red)' },
+      { key: 'COST/月',     val: '$150〜400', color: 'var(--yellow)' },
+      { key: 'PORTABILITY', val: '低',        color: 'var(--red)' },
+    ],
+    riskVal: 'CRITICAL',
+    riskWidth: '95%',
+    riskColor: 'var(--red)',
+    stack: [
+      { name: 'AWS EC2',        desc: 'アプリサーバ。アダルトコンテンツはTOS違反のリスク大。',    color: 'var(--red)' },
+      { name: 'AWS S3',         desc: '画像・動画ストレージ。報告1件でバケット凍結の前例あり。', color: 'var(--red)' },
+      { name: 'CloudFront CDN', desc: 'コンテンツ配信。AWSアカウントごと凍結するリスク。',       color: 'var(--red)' },
+      { name: 'Cloudflare',     desc: 'WAF・DDoS対策。アダルトサイトのアカウント削除事例多数。', color: 'var(--red)' },
+      { name: 'WordPress',      desc: '管理・フロント兼用。パブリックに公開されセキュリティリスク。', color: 'var(--yellow)' },
+      { name: 'RDS MySQL',      desc: 'DB。プロプライエタリ依存で移行コストが高い。',            color: 'var(--yellow)' },
+    ],
+  },
+  good: {
+    title: 'レジリエンス構成',
+    metrics: [
+      { key: 'BAN RISK',    val: 'LOW',      color: 'var(--accent)' },
+      { key: 'RECOVERY',    val: '30分以内',  color: 'var(--accent)' },
+      { key: 'COST/月',     val: '$60〜120',  color: 'var(--accent)' },
+      { key: 'PORTABILITY', val: '高',        color: 'var(--accent)' },
+    ],
+    riskVal: 'LOW',
+    riskWidth: '18%',
+    riskColor: 'var(--accent)',
+    stack: [
+      { name: 'Vercel',         desc: 'Next.jsフロントのみ。静的配信はTOS問題なし。コンテンツ層と分離。', color: 'var(--accent)' },
+      { name: 'Bunny.net CDN',  desc: 'アダルトOKを明示した欧州系CDN。転送コスト約1/10。',             color: 'var(--accent)' },
+      { name: 'Bunny Stream',   desc: '動画専用配信。HLS変換・サムネイル生成も込み。',                  color: 'var(--accent)' },
+      { name: 'Datapacket VPS', desc: 'オフショアVPS。アダルトOK・DMCA対応・固定費で予測可能。',       color: 'var(--accent)' },
+      { name: 'Docker Compose', desc: 'WordPress+PostgreSQL+Nginxをコード化。30分で別環境に移行可能。',color: 'var(--accent)' },
+      { name: 'WordPress (CMS only)', desc: 'ヘッドレス化。管理画面のみ、外部公開なし。教育コストゼロ。', color: 'var(--blue)' },
+    ],
+  },
+};
+
+// SVG生成
+function makeSVG(type) {
+  if (type === 'bad') return makeSVGBad();
+  return makeSVGGood();
+}
+
+function node(x, y, w, h, label, sub, color, fill) {
+  return `
+    <g>
+      <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3"
+        fill="${fill || 'rgba(20,20,20,0.9)'}"
+        stroke="${color}" stroke-width="1"/>
+      <text x="${x + w/2}" y="${y + h/2 - 6}" text-anchor="middle"
+        fill="${color}" font-size="11" font-weight="600">${label}</text>
+      <text x="${x + w/2}" y="${y + h/2 + 10}" text-anchor="middle"
+        fill="#555" font-size="9">${sub}</text>
+    </g>
+  `;
+}
+
+function arrow(x1, y1, x2, y2, color, dashed) {
+  const dash = dashed ? 'stroke-dasharray="4,3"' : '';
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  const ux = dx/len, uy = dy/len;
+  const ax = x2 - ux*8, ay = y2 - uy*8;
+  return `
+    <line x1="${x1}" y1="${y1}" x2="${ax}" y2="${ay}"
+      stroke="${color}" stroke-width="1" ${dash} opacity="0.6"/>
+    <polygon points="${x2},${y2} ${ax - uy*4},${ay + ux*4} ${ax + uy*4},${ay - ux*4}"
+      fill="${color}" opacity="0.6"/>
+  `;
+}
+
+function label(x, y, text, color) {
+  return `<text x="${x}" y="${y}" fill="${color || '#555'}" font-size="9" letter-spacing="1">${text}</text>`;
+}
+
+function makeSVGBad() {
+  const W = 700, H = 420;
+  return `<svg viewBox="0 0 ${W} ${H}">
+    <defs>
+      <marker id="ah" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="#ff4444" opacity="0.6"/>
+      </marker>
+    </defs>
+
+    ${label(20, 20, 'USER / BROWSER', '#888')}
+    ${node(20, 30, 120, 44, 'ユーザー', 'Browser', '#888')}
+
+    ${label(200, 20, 'CDN / EDGE', '#ff4444')}
+    ${node(200, 30, 140, 44, 'Cloudflare', 'WAF + CDN', '#ff4444', 'rgba(255,68,68,0.05)')}
+
+    ${label(400, 20, 'CONTENT DELIVERY', '#ff4444')}
+    ${node(400, 30, 140, 44, 'CloudFront', 'AWS CDN', '#ff4444', 'rgba(255,68,68,0.05)')}
+
+    ${arrow(140, 52, 200, 52, '#ff4444')}
+    ${arrow(340, 52, 400, 52, '#ff4444')}
+
+    ${label(200, 110, 'COMPUTE', '#ff4444')}
+    ${node(200, 120, 130, 44, 'AWS EC2', 'App Server', '#ff4444', 'rgba(255,68,68,0.05)')}
+
+    ${label(400, 110, 'STORAGE', '#ff4444')}
+    ${node(400, 120, 130, 44, 'AWS S3', '画像・動画', '#ff4444', 'rgba(255,68,68,0.05)')}
+
+    ${label(200, 200, 'CMS + FRONTEND', '#ffd166')}
+    ${node(200, 210, 130, 44, 'WordPress', 'All-in-One', '#ffd166', 'rgba(255,209,102,0.05)')}
+
+    ${label(400, 200, 'DATABASE', '#ffd166')}
+    ${node(400, 210, 130, 44, 'RDS MySQL', 'Managed DB', '#ffd166', 'rgba(255,209,102,0.05)')}
+
+    ${arrow(265, 120, 265, 120+44+10, '#888', true)}
+    ${arrow(465, 120, 465, 120+44+10, '#888', true)}
+    ${arrow(265, 74, 265, 120, '#888', true)}
+    ${arrow(330, 142, 400, 142, '#888', true)}
+    ${arrow(330, 232, 400, 232, '#888', true)}
+
+    <!-- BAN警告 -->
+    <rect x="20" y="290" width="660" height="90" rx="3"
+      fill="rgba(255,68,68,0.04)" stroke="rgba(255,68,68,0.2)" stroke-width="1"/>
+    <text x="36" y="314" fill="#ff4444" font-size="10" font-weight="600" letter-spacing="1">⚠ BAN RISK ZONES</text>
+    <text x="36" y="334" fill="#ff4444" font-size="9" opacity="0.7">Cloudflare: アダルトサイトのアカウント削除事例多数。WAF設定ごと失う。</text>
+    <text x="36" y="350" fill="#ff4444" font-size="9" opacity="0.7">AWS EC2 / S3: TOS § 3.2 でアダルトコンテンツを明示禁止。報告1件で凍結リスク。</text>
+    <text x="36" y="366" fill="#ff4444" font-size="9" opacity="0.7">CloudFront: アカウント単位で凍結。同アカウントの無関係なサービスも巻き添え。</text>
+  </svg>`;
+}
+
+function makeSVGGood() {
+  const W = 700, H = 440;
+  return `<svg viewBox="0 0 ${W} ${H}">
+
+    ${label(20, 20, 'USER / BROWSER', '#888')}
+    ${node(20, 30, 110, 44, 'ユーザー', 'Browser', '#888')}
+
+    ${label(190, 20, 'FRONTEND — Vercel (Static Only)', '#00ff88')}
+    ${node(190, 30, 160, 44, 'Next.js', 'Vercel — フロントのみ', '#00ff88', 'rgba(0,255,136,0.05)')}
+
+    ${label(420, 20, 'CDN — Bunny.net', '#00ff88')}
+    ${node(420, 30, 140, 44, 'Bunny CDN', 'Adult OK / EU拠点', '#00ff88', 'rgba(0,255,136,0.05)')}
+
+    ${arrow(130, 52, 190, 52, '#00ff88')}
+    ${arrow(350, 52, 420, 52, '#00ff88')}
+
+    ${label(190, 110, 'VIDEO — Bunny Stream', '#00ff88')}
+    ${node(190, 120, 160, 44, 'Bunny Stream', 'HLS配信・Adult OK', '#00ff88', 'rgba(0,255,136,0.05)')}
+
+    ${label(420, 110, 'ORIGIN SERVER', '#4d9fff')}
+    ${node(420, 120, 140, 44, 'Datapacket VPS', 'Offshore / Adult OK', '#4d9fff', 'rgba(77,159,255,0.05)')}
+
+    ${label(190, 200, 'CMS — Headless / Private', '#4d9fff')}
+    ${node(190, 210, 160, 44, 'WordPress', 'ヘッドレス・非公開', '#4d9fff', 'rgba(77,159,255,0.05)')}
+
+    ${label(420, 200, 'DATABASE', '#4d9fff')}
+    ${node(420, 210, 140, 44, 'PostgreSQL', 'Docker内 / OSS', '#4d9fff', 'rgba(77,159,255,0.05)')}
+
+    ${arrow(270, 74, 270, 120, '#00ff88', true)}
+    ${arrow(490, 74, 490, 120, '#00ff88', true)}
+    ${arrow(350, 142, 420, 142, '#888', true)}
+    ${arrow(350, 232, 420, 232, '#888', true)}
+    ${arrow(490, 164, 490, 210, '#888', true)}
+    ${arrow(270, 164, 270, 210, '#888', true)}
+
+    <!-- Docker Box -->
+    <rect x="395" y="100" width="285" height="180" rx="3"
+      fill="none" stroke="rgba(77,159,255,0.2)" stroke-width="1" stroke-dasharray="6,4"/>
+    <text x="410" y="296" fill="rgba(77,159,255,0.4)" font-size="9" letter-spacing="1">DOCKER COMPOSE — 30分で別サーバへ移行可能</text>
+
+    <!-- OK badge -->
+    <rect x="20" y="300" width="660" height="90" rx="3"
+      fill="rgba(0,255,136,0.03)" stroke="rgba(0,255,136,0.15)" stroke-width="1"/>
+    <text x="36" y="324" fill="#00ff88" font-size="10" font-weight="600" letter-spacing="1">✓ RESILIENCE DESIGN</text>
+    <text x="36" y="344" fill="#00ff88" font-size="9" opacity="0.7">Vercel: 静的フロントのみ。コンテンツはBunny.netに完全分離。BAN対象外。</text>
+    <text x="36" y="360" fill="#00ff88" font-size="9" opacity="0.7">Bunny.net: アダルトOKを利用規約に明示。EU拠点でDMCA対応も実績あり。</text>
+    <text x="36" y="376" fill="#00ff88" font-size="9" opacity="0.7">Docker Compose: 全環境をコード化。TTL 300秒 + Runbook整備で30分以内復旧。</text>
+  </svg>`;
+}
+
+// State
+let current = 'bad';
+
+function switchArch(type) {
+  current = type;
+  const d = DATA[type];
+
+  // Toggle buttons
+  document.getElementById('btn-bad').className = 'toggle-option' + (type==='bad' ? ' active-bad' : '');
+  document.getElementById('btn-good').className = 'toggle-option' + (type==='good' ? ' active-good' : '');
+
+  // Risk badge
+  const badge = document.getElementById('riskBadge');
+  badge.className = `risk-badge ${type==='bad' ? 'risk-high' : 'risk-low'}`;
+  badge.textContent = type==='bad' ? 'BAN RISK: HIGH' : 'BAN RISK: LOW';
+
+  // Diagram
+  document.getElementById('diagramTitle').textContent = d.title;
+  const svgWrap = document.getElementById('svgWrap');
+  svgWrap.innerHTML = makeSVG(type);
+  svgWrap.classList.remove('anim');
+  void svgWrap.offsetWidth;
+  svgWrap.classList.add('anim');
+
+  // Risk bar
+  document.getElementById('riskBar').style.width = d.riskWidth;
+  document.getElementById('riskBar').style.background = d.riskColor;
+  document.getElementById('riskVal').style.color = d.riskColor;
+  document.getElementById('riskVal').textContent = d.riskVal;
+
+  // Metrics
+  const mg = document.getElementById('metricGrid');
+  mg.innerHTML = '';
+  d.metrics.forEach(m => {
+    mg.innerHTML += `
+      <div class="metric-card">
+        <div class="metric-key">${m.key}</div>
+        <div class="metric-val" style="color:${m.color}">${m.val}</div>
+      </div>
+    `;
+  });
+
+  // Stack
+  const sl = document.getElementById('stackList');
+  sl.innerHTML = '';
+  d.stack.forEach(s => {
+    sl.innerHTML += `
+      <div class="stack-item">
+        <div class="stack-dot" style="background:${s.color}"></div>
+        <div>
+          <div class="stack-name" style="color:${s.color}">${s.name}</div>
+          <div class="stack-desc">${s.desc}</div>
+        </div>
+      </div>
+    `;
+  });
+}
+
+// Init
+switchArch('bad');
+</script>
+</body>
+</html>
